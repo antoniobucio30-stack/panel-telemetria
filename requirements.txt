@@ -2,4 +2,4 @@ streamlit
 pandas
 numpy
 pydeck
-opencv-python-headlessa
+opencv-python-headless
