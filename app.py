@@ -32,10 +32,13 @@ with st.sidebar:
     st.markdown("### Control de Operaciones")
     with st.container(border=True):
         st.markdown("**Unidad Alfa**")
+        # Campo dinámico para la IP (Si pones 0, usa la cámara web local)
+        ip_alfa = st.text_input("URL de Video / WebCam (Ej: 0)", value="0", key="ip_alfa")
         monitorear_alfa = st.toggle("Enlazar Canal Alfa", value=False)
     
     with st.container(border=True):
         st.markdown("**Unidad Beta**")
+        ip_beta = st.text_input("URL de Video / WebCam", value="", key="ip_beta")
         monitorear_beta = st.toggle("Enlazar Canal Beta", value=False)
 
 # Cuadro de Indicadores de Rendimiento (KPIs)
@@ -74,25 +77,50 @@ with col_cartografia:
 
 # Lógica de actualización en tiempo real
 if monitorear_alfa or monitorear_beta:
+    
+    # --- INICIALIZACIÓN DE CÁMARAS ---
+    # Convertimos el texto a número si el usuario ingresó un solo dígito (ej: "0" para la webcam)
+    cap_alfa = None
+    if monitorear_alfa and ip_alfa.strip() != "":
+        fuente_alfa = int(ip_alfa) if ip_alfa.strip().isdigit() else ip_alfa
+        cap_alfa = cv2.VideoCapture(fuente_alfa)
+        
+    cap_beta = None
+    if monitorear_beta and ip_beta.strip() != "":
+        fuente_beta = int(ip_beta) if ip_beta.strip().isdigit() else ip_beta
+        cap_beta = cv2.VideoCapture(fuente_beta)
+
     while monitorear_alfa or monitorear_beta:
         
-        # --- RECEPCIÓN Y RENDERIZADO DE VIDEO ---
-        # En producción, aquí se procesan las imágenes enviadas por la ESP32-CAM
+        # --- RECEPCIÓN Y RENDERIZADO DE VIDEO ALFA ---
         if monitorear_alfa:
-            # Reemplazar con el stream real de la ESP32-CAM en producción
-            marco_simulado_alfa = np.zeros((360, 640, 3), dtype=np.uint8)
-            cv2.putText(marco_simulado_alfa, "Streaming Inalámbrico Alfa", (50, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-            visor_alfa.image(marco_simulado_alfa, channels="RGB", use_container_width=True)
-            
+            if cap_alfa and cap_alfa.isOpened():
+                ret_a, frame_a = cap_alfa.read()
+                if ret_a:
+                    # OpenCV lee en BGR, Streamlit necesita RGB
+                    frame_a_rgb = cv2.cvtColor(frame_a, cv2.COLOR_BGR2RGB)
+                    visor_alfa.image(frame_a_rgb, channels="RGB", use_container_width=True)
+                else:
+                    visor_alfa.error("Pérdida de señal de video Alfa.")
+            else:
+                visor_alfa.warning("Intentando establecer conexión con la IP Alfa...")
+
             # Movimiento logístico simulado (hasta conectar el NEO-6M real)
             st.session_state.coordenadas_alfa["lat"] += np.random.uniform(-0.0001, 0.0001)
             st.session_state.coordenadas_alfa["lon"] += np.random.uniform(-0.0001, 0.0001)
 
+        # --- RECEPCIÓN Y RENDERIZADO DE VIDEO BETA ---
         if monitorear_beta:
-            marco_simulado_beta = np.zeros((360, 640, 3), dtype=np.uint8)
-            cv2.putText(marco_simulado_beta, "Streaming Inalámbrico Beta", (50, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-            visor_beta.image(marco_simulado_beta, channels="RGB", use_container_width=True)
-            
+            if cap_beta and cap_beta.isOpened():
+                ret_b, frame_b = cap_beta.read()
+                if ret_b:
+                    frame_b_rgb = cv2.cvtColor(frame_b, cv2.COLOR_BGR2RGB)
+                    visor_beta.image(frame_b_rgb, channels="RGB", use_container_width=True)
+                else:
+                    visor_beta.error("Pérdida de señal de video Beta.")
+            else:
+                visor_beta.warning("Intentando establecer conexión con la IP Beta...")
+
             st.session_state.coordenadas_beta["lat"] += np.random.uniform(-0.0001, 0.0001)
             st.session_state.coordenadas_beta["lon"] += np.random.uniform(-0.0001, 0.0001)
 
@@ -137,4 +165,5 @@ if monitorear_alfa or monitorear_beta:
             )
             mapa_operativo.pydeck_chart(pila_mapas)
         
-        time.sleep(0.1)
+        # Pequeña pausa para no saturar el procesador
+        time.sleep(0.05)
