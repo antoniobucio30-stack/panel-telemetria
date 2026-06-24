@@ -7,7 +7,7 @@ from datetime import datetime
 import time
 
 # Configuración de la interfaz de usuario
-st.set_page_config(page_title="Sistema de Gestión Temática", layout="wide")
+st.set_page_config(page_title="Sistema de Gestión", layout="wide")
 
 # Estilos profesionales personalizados
 st.markdown("""
